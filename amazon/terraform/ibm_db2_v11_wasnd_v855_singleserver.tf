@@ -26,13 +26,13 @@ variable "user_public_ssh_key" {
 }
 
 variable "aws_ami_owner_id" {
-  description = "The AMI Owner ID"
-  default     = "309956199498"
+  description = "AWS AMI Owner ID"
+  default = "309956199498"
 }
 
 variable "aws_region" {
-  description = "The aws region"
-  default     = "us-east-1"
+  description = "AWS Region Name"
+  default = "us-east-1"
 }
 
 ##############################################################
@@ -45,6 +45,10 @@ provider "aws" {
 
 provider "camc" {
   version = "~> 0.1"
+}
+
+provider "template" {
+  version = "~> 1.0"
 }
 
 provider "random" {
@@ -60,7 +64,7 @@ data "aws_vpc" "selected_vpc" {
 
 #Parameter : aws_vpc_name
 variable "aws_vpc_name" {
-  description = "The name of the aws vpc"
+  description = "AWS VPC Name"
 }
 
 data "aws_security_group" "aws_sg_camc_name_selected" {
@@ -70,7 +74,7 @@ data "aws_security_group" "aws_sg_camc_name_selected" {
 
 #Parameter : aws_sg_camc_name
 variable "aws_sg_camc_name" {
-  description = "The name of the aws security group for automation content"
+  description = "AWS Security Group Name"
 }
 
 resource "random_id" "stack_id" {
@@ -85,25 +89,8 @@ variable "ibm_stack_name" {
   description = "A unique stack name."
 }
 
-#### Default OS Admin User Map ####
-variable "default_os_admin_user" {
-  type        = "map"
-  description = "look up os_admin_user using resource image"
-
-  default = {
-    ubuntu_images_ubuntu_xenial-16.04_099720109477 = "ubuntu"
-    RHEL-7.4_HVM_GA_309956199498                   = "ec2-user"
-  }
-}
 
 ##### DB2WASNode01 variables #####
-#Variable : DB2WASNode01-flavor
-variable "DB2WASNode01-flavor" {
-  type        = "string"
-  description = "DB2WASNode01 Flavor"
-  default     = "t2.large"
-}
-
 data "aws_ami" "DB2WASNode01_ami" {
   most_recent = true
 
@@ -119,14 +106,7 @@ data "aws_ami" "DB2WASNode01_ami" {
 variable "DB2WASNode01-image" {
   type        = "string"
   description = "Operating system image id / template that should be used when creating the virtual image"
-  default     = "RHEL-7.4_HVM_GA"
-}
-
-#Variable : DB2WASNode01-mgmt-network-public
-variable "DB2WASNode01-mgmt-network-public" {
-  type        = "string"
-  description = "Expose and use public IP of virtual machine for internal communication"
-  default     = "true"
+  default = "RHEL-7.4_HVM_GA"
 }
 
 #Variable : DB2WASNode01-name
@@ -455,7 +435,7 @@ variable "DB2WASNode01_was_profiles_standalone_profiles_standalone1_profile" {
 variable "DB2WASNode01_was_profiles_standalone_profiles_standalone1_server" {
   type        = "string"
   description = "Name of the application server"
-  default     = "standalone01"
+  default = "server1"
 }
 
 #Variable : DB2WASNode01_was_security_admin_user
@@ -543,6 +523,22 @@ variable "ibm_sw_repo_user" {
   default     = "repouser"
 }
 
+
+##### virtualmachine variables #####
+#Variable : DB2WASNode01-flavor
+variable "DB2WASNode01-flavor" {
+  type = "string"
+  description = "DB2WASNode01 Flavor"
+  default = "m3.large"
+}
+
+#Variable : DB2WASNode01-mgmt-network-public
+variable "DB2WASNode01-mgmt-network-public" {
+  type = "string"
+  description = "Expose and use public IP of virtual machine for internal communication"
+  default = "true"
+}
+
 ##### domain name #####
 variable "runtime_domain" {
   description = "domain name"
@@ -568,9 +564,9 @@ variable "DB2WASNode01_subnet_name" {
 
 #Parameter : DB2WASNode01_associate_public_ip_address
 variable "DB2WASNode01_associate_public_ip_address" {
-  type        = "string"
-  description = "Assign a public IP"
-  default     = "true"
+  type = "string"
+  description = "AWS assign a public IP to instance"
+  default = "true"
 }
 
 #Parameter : DB2WASNode01_root_block_device_volume_type
@@ -584,7 +580,7 @@ variable "DB2WASNode01_root_block_device_volume_type" {
 variable "DB2WASNode01_root_block_device_volume_size" {
   type        = "string"
   description = "AWS Root Block Device Volume Size"
-  default     = "25"
+  default = "100"
 }
 
 #Parameter : DB2WASNode01_root_block_device_delete_on_termination
@@ -608,7 +604,7 @@ resource "aws_instance" "DB2WASNode01" {
 
   # Specify the ssh connection
   connection {
-    user        = "${var.DB2WASNode01-os_admin_user == "" ? lookup(var.default_os_admin_user, format("%s_%s", replace(var.DB2WASNode01-image, "/", "_"), var.aws_ami_owner_id)) : var.DB2WASNode01-os_admin_user}"
+    user = "${var.DB2WASNode01-os_admin_user}"
     private_key = "${base64decode(var.ibm_pm_private_ssh_key)}"
   }
 
@@ -682,7 +678,7 @@ data "template_cloudinit_config" "DB2WASNode01_init" {
     content_type = "text/cloud-config"
 
     content = <<EOF
-hostname: ${var.DB2WASNode01-name}
+hostname: ${var.DB2WASNode01-name}.${var.runtime_domain}
 fqdn: ${var.DB2WASNode01-name}.${var.runtime_domain}
 manage_etc_hosts: false
 EOF
@@ -703,7 +699,7 @@ resource "camc_bootstrap" "DB2WASNode01_chef_bootstrap_comp" {
 
   data = <<EOT
 {
-  "os_admin_user": "${var.DB2WASNode01-os_admin_user == "default"? lookup(var.default_os_admin_user, format("%s_%s", replace(var.DB2WASNode01-image, "/", "_"), var.aws_ami_owner_id)) : var.DB2WASNode01-os_admin_user}",
+  "os_admin_user": "${var.DB2WASNode01-os_admin_user}",
   "stack_id": "${random_id.stack_id.hex}",
   "environment_name": "_default",
   "host_ip": "${var.DB2WASNode01-mgmt-network-public == "false" ? aws_instance.DB2WASNode01.private_ip : aws_instance.DB2WASNode01.public_ip}",
@@ -727,16 +723,16 @@ EOT
 #########################################################
 
 resource "camc_softwaredeploy" "DB2WASNode01_db2_create_db" {
-  depends_on      = ["camc_softwaredeploy.DB2WASNode01_db2_v111_install"]
-  name            = "DB2WASNode01_db2_create_db"
-  camc_endpoint   = "${var.ibm_pm_service}/v1/software_deployment/chef"
-  access_token    = "${var.ibm_pm_access_token}"
+  depends_on = ["camc_softwaredeploy.DB2WASNode01_was_v855_install"]
+  name = "DB2WASNode01_db2_create_db"
+  camc_endpoint = "${var.ibm_pm_service}/v1/software_deployment/chef"
+  access_token = "${var.ibm_pm_access_token}"
   skip_ssl_verify = true
   trace           = true
 
   data = <<EOT
 {
-  "os_admin_user": "${var.DB2WASNode01-os_admin_user == "default"? lookup(var.default_os_admin_user, format("%s_%s", replace(var.DB2WASNode01-image, "/", "_"), var.aws_ami_owner_id)) : var.DB2WASNode01-os_admin_user}",
+  "os_admin_user": "${var.DB2WASNode01-os_admin_user}",
   "stack_id": "${random_id.stack_id.hex}",
   "environment_name": "_default",
   "host_ip": "${var.DB2WASNode01-mgmt-network-public == "false" ? aws_instance.DB2WASNode01.private_ip : aws_instance.DB2WASNode01.public_ip}",
@@ -830,7 +826,7 @@ resource "camc_softwaredeploy" "DB2WASNode01_db2_v111_install" {
 
   data = <<EOT
 {
-  "os_admin_user": "${var.DB2WASNode01-os_admin_user == "default"? lookup(var.default_os_admin_user, format("%s_%s", replace(var.DB2WASNode01-image, "/", "_"), var.aws_ami_owner_id)) : var.DB2WASNode01-os_admin_user}",
+  "os_admin_user": "${var.DB2WASNode01-os_admin_user}",
   "stack_id": "${random_id.stack_id.hex}",
   "environment_name": "_default",
   "host_ip": "${var.DB2WASNode01-mgmt-network-public == "false" ? aws_instance.DB2WASNode01.private_ip : aws_instance.DB2WASNode01.public_ip}",
@@ -874,16 +870,16 @@ EOT
 #########################################################
 
 resource "camc_softwaredeploy" "DB2WASNode01_was_create_standalone" {
-  depends_on      = ["camc_softwaredeploy.DB2WASNode01_was_v855_install"]
-  name            = "DB2WASNode01_was_create_standalone"
-  camc_endpoint   = "${var.ibm_pm_service}/v1/software_deployment/chef"
-  access_token    = "${var.ibm_pm_access_token}"
+  depends_on = ["camc_softwaredeploy.DB2WASNode01_db2_create_db"]
+  name = "DB2WASNode01_was_create_standalone"
+  camc_endpoint = "${var.ibm_pm_service}/v1/software_deployment/chef"
+  access_token = "${var.ibm_pm_access_token}"
   skip_ssl_verify = true
   trace           = true
 
   data = <<EOT
 {
-  "os_admin_user": "${var.DB2WASNode01-os_admin_user == "default"? lookup(var.default_os_admin_user, format("%s_%s", replace(var.DB2WASNode01-image, "/", "_"), var.aws_ami_owner_id)) : var.DB2WASNode01-os_admin_user}",
+  "os_admin_user": "${var.DB2WASNode01-os_admin_user}",
   "stack_id": "${random_id.stack_id.hex}",
   "environment_name": "_default",
   "host_ip": "${var.DB2WASNode01-mgmt-network-public == "false" ? aws_instance.DB2WASNode01.private_ip : aws_instance.DB2WASNode01.public_ip}",
@@ -937,16 +933,16 @@ EOT
 #########################################################
 
 resource "camc_softwaredeploy" "DB2WASNode01_was_v855_install" {
-  depends_on      = ["camc_softwaredeploy.DB2WASNode01_db2_create_db"]
-  name            = "DB2WASNode01_was_v855_install"
-  camc_endpoint   = "${var.ibm_pm_service}/v1/software_deployment/chef"
-  access_token    = "${var.ibm_pm_access_token}"
+  depends_on = ["camc_softwaredeploy.DB2WASNode01_db2_v111_install"]
+  name = "DB2WASNode01_was_v855_install"
+  camc_endpoint = "${var.ibm_pm_service}/v1/software_deployment/chef"
+  access_token = "${var.ibm_pm_access_token}"
   skip_ssl_verify = true
   trace           = true
 
   data = <<EOT
 {
-  "os_admin_user": "${var.DB2WASNode01-os_admin_user == "default"? lookup(var.default_os_admin_user, format("%s_%s", replace(var.DB2WASNode01-image, "/", "_"), var.aws_ami_owner_id)) : var.DB2WASNode01-os_admin_user}",
+  "os_admin_user": "${var.DB2WASNode01-os_admin_user}",
   "stack_id": "${random_id.stack_id.hex}",
   "environment_name": "_default",
   "host_ip": "${var.DB2WASNode01-mgmt-network-public == "false" ? aws_instance.DB2WASNode01.private_ip : aws_instance.DB2WASNode01.public_ip}",
