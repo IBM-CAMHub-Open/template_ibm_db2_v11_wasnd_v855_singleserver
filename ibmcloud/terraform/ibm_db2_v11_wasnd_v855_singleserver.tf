@@ -1,15 +1,24 @@
 # =================================================================
-# Licensed Materials - Property of IBM
-# 5737-E67
-# @ Copyright IBM Corporation 2016, 2017 All Rights Reserved
-# US Government Users Restricted Rights - Use, duplication or disclosure
-# restricted by GSA ADP Schedule Contract with IBM Corp.
+# Copyright 2017 IBM Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+#	you may not use this file except in compliance with the License.
+#	You may obtain a copy of the License at
+#
+#	  http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+#	WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 # =================================================================
 
 # This is a terraform generated template generated from ibm_db2_v11_wasnd_v855_singleserver
 
 ##############################################################
-# Keys - CAMC (public/private) & optional User Key (public) 
+# Keys - CAMC (public/private) & optional User Key (public)
 ##############################################################
 variable "ibm_pm_public_ssh_key_name" {
   description = "Public CAMC SSH key name used to connect to the virtual guest."
@@ -25,8 +34,12 @@ variable "user_public_ssh_key" {
   default = "None"
 }
 
+variable "ibm_stack_id" {
+  description = "A unique stack id."
+}
+
 ##############################################################
-# Define the ibm provider 
+# Define the ibm provider
 ##############################################################
 #define the ibm provider
 provider "ibm" {
@@ -37,24 +50,16 @@ provider "camc" {
   version = "~> 0.1"
 }
 
-provider "random" {
-  version = "~> 1.0"
-}
-
 ##############################################################
-# Reference public key in Devices>Manage>SSH Keys in SL console) 
+# Reference public key in Devices>Manage>SSH Keys in SL console)
 ##############################################################
 data "ibm_compute_ssh_key" "ibm_pm_public_key" {
   label = "${var.ibm_pm_public_ssh_key_name}"
   most_recent = "true"
 }
 
-resource "random_id" "stack_id" {
-  byte_length = "16"
-}
-
 ##############################################################
-# Define pattern variables 
+# Define pattern variables
 ##############################################################
 ##### unique stack name #####
 variable "ibm_stack_name" {
@@ -327,7 +332,7 @@ variable "DB2WASNode01_was_install_dir" {
 variable "DB2WASNode01_was_java_version" {
   type = "string"
   description = "The Java SDK version that should be installed with the WebSphere Application Server. Example format is 8.0.4.70"
-  default = "7.1.40.5"
+  default = "7.1.4.15"
 }
 
 #Variable : DB2WASNode01_was_os_users_was_comment
@@ -415,8 +420,8 @@ variable "DB2WASNode01_was_security_admin_user_pwd" {
 #Variable : DB2WASNode01_was_version
 variable "DB2WASNode01_was_version" {
   type = "string"
-  description = "The release and fixpack level of WebSphere Application Server to be installed. Example formats are 8.5.5.12 or 9.0.0.4"
-  default = "8.5.5.12"
+  description = "The release and fixpack level of WebSphere Application Server to be installed. Example formats are 8.5.5.13 or 9.0.0.6"
+  default = "8.5.5.13"
 }
 
 #Variable : DB2WASNode01_was_wsadmin_standalone_jvmproperty_property_value_initial
@@ -528,7 +533,7 @@ variable "DB2WASNode01_private_network_only" {
 variable "DB2WASNode01_number_of_cores" {
   type = "string"
   description = "Number of CPU cores, which is required to be a positive Integer"
-  default = "4"
+  default = "2"
 }
 
 
@@ -574,7 +579,7 @@ variable "DB2WASNode01_local_disk" {
 variable "DB2WASNode01_root_disk_size" {
   type = "string"
   description = "Root Disk Size - DB2WASNode01"
-  default = "25"
+  default = "100"
 }
 
 resource "ibm_compute_vm_instance" "DB2WASNode01" {
@@ -601,11 +606,20 @@ resource "ibm_compute_vm_instance" "DB2WASNode01" {
     destination = "DB2WASNode01_add_ssh_key.sh"
     content     = <<EOF
 # =================================================================
-# Licensed Materials - Property of IBM
-# 5737-E67
-# @ Copyright IBM Corporation 2016, 2017 All Rights Reserved
-# US Government Users Restricted Rights - Use, duplication or disclosure
-# restricted by GSA ADP Schedule Contract with IBM Corp.
+# Copyright 2017 IBM Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+#	you may not use this file except in compliance with the License.
+#	You may obtain a copy of the License at
+#
+#	  http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+#	WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 # =================================================================
 #!/bin/bash
 
@@ -666,17 +680,17 @@ resource "camc_bootstrap" "DB2WASNode01_chef_bootstrap_comp" {
   data = <<EOT
 {
   "os_admin_user": "${var.DB2WASNode01-os_admin_user}",
-  "stack_id": "${random_id.stack_id.hex}",
+  "stack_id": "${var.ibm_stack_id}",
   "environment_name": "_default",
   "host_ip": "${var.DB2WASNode01-mgmt-network-public == "false" ? ibm_compute_vm_instance.DB2WASNode01.ipv4_address_private : ibm_compute_vm_instance.DB2WASNode01.ipv4_address}",
   "node_name": "${var.DB2WASNode01-name}",
   "node_attributes": {
     "ibm_internal": {
-      "stack_id": "${random_id.stack_id.hex}",
+      "stack_id": "${var.ibm_stack_id}",
       "stack_name": "${var.ibm_stack_name}",
       "vault": {
         "item": "secrets",
-        "name": "${random_id.stack_id.hex}"
+        "name": "${var.ibm_stack_id}"
       }
     }
   }
@@ -699,7 +713,7 @@ resource "camc_softwaredeploy" "DB2WASNode01_db2_create_db" {
   data = <<EOT
 {
   "os_admin_user": "${var.DB2WASNode01-os_admin_user}",
-  "stack_id": "${random_id.stack_id.hex}",
+  "stack_id": "${var.ibm_stack_id}",
   "environment_name": "_default",
   "host_ip": "${var.DB2WASNode01-mgmt-network-public == "false" ? ibm_compute_vm_instance.DB2WASNode01.ipv4_address_private : ibm_compute_vm_instance.DB2WASNode01.ipv4_address}",
   "node_name": "${var.DB2WASNode01-name}",
@@ -772,7 +786,7 @@ resource "camc_softwaredeploy" "DB2WASNode01_db2_create_db" {
         }
       }
     },
-    "vault": "${random_id.stack_id.hex}"
+    "vault": "${var.ibm_stack_id}"
   }
 }
 EOT
@@ -793,7 +807,7 @@ resource "camc_softwaredeploy" "DB2WASNode01_db2_v111_install" {
   data = <<EOT
 {
   "os_admin_user": "${var.DB2WASNode01-os_admin_user}",
-  "stack_id": "${random_id.stack_id.hex}",
+  "stack_id": "${var.ibm_stack_id}",
   "environment_name": "_default",
   "host_ip": "${var.DB2WASNode01-mgmt-network-public == "false" ? ibm_compute_vm_instance.DB2WASNode01.ipv4_address_private : ibm_compute_vm_instance.DB2WASNode01.ipv4_address}",
   "node_name": "${var.DB2WASNode01-name}",
@@ -825,7 +839,7 @@ resource "camc_softwaredeploy" "DB2WASNode01_db2_v111_install" {
         "sw_repo_password": "${var.ibm_sw_repo_password}"
       }
     },
-    "vault": "${random_id.stack_id.hex}"
+    "vault": "${var.ibm_stack_id}"
   }
 }
 EOT
@@ -846,7 +860,7 @@ resource "camc_softwaredeploy" "DB2WASNode01_was_create_standalone" {
   data = <<EOT
 {
   "os_admin_user": "${var.DB2WASNode01-os_admin_user}",
-  "stack_id": "${random_id.stack_id.hex}",
+  "stack_id": "${var.ibm_stack_id}",
   "environment_name": "_default",
   "host_ip": "${var.DB2WASNode01-mgmt-network-public == "false" ? ibm_compute_vm_instance.DB2WASNode01.ipv4_address_private : ibm_compute_vm_instance.DB2WASNode01.ipv4_address}",
   "node_name": "${var.DB2WASNode01-name}",
@@ -888,7 +902,7 @@ resource "camc_softwaredeploy" "DB2WASNode01_was_create_standalone" {
         }
       }
     },
-    "vault": "${random_id.stack_id.hex}"
+    "vault": "${var.ibm_stack_id}"
   }
 }
 EOT
@@ -909,7 +923,7 @@ resource "camc_softwaredeploy" "DB2WASNode01_was_v855_install" {
   data = <<EOT
 {
   "os_admin_user": "${var.DB2WASNode01-os_admin_user}",
-  "stack_id": "${random_id.stack_id.hex}",
+  "stack_id": "${var.ibm_stack_id}",
   "environment_name": "_default",
   "host_ip": "${var.DB2WASNode01-mgmt-network-public == "false" ? ibm_compute_vm_instance.DB2WASNode01.ipv4_address_private : ibm_compute_vm_instance.DB2WASNode01.ipv4_address}",
   "node_name": "${var.DB2WASNode01-name}",
@@ -956,7 +970,7 @@ resource "camc_softwaredeploy" "DB2WASNode01_was_v855_install" {
         }
       }
     },
-    "vault": "${random_id.stack_id.hex}"
+    "vault": "${var.ibm_stack_id}"
   }
 }
 EOT
@@ -977,7 +991,7 @@ resource "camc_vaultitem" "VaultItem" {
   "vault_content": {
     "item": "secrets",
     "values": {},
-    "vault": "${random_id.stack_id.hex}"
+    "vault": "${var.ibm_stack_id}"
   }
 }
 EOT
@@ -996,6 +1010,5 @@ output "DB2WASNode01_roles" {
 }
 
 output "stack_id" {
-  value = "${random_id.stack_id.hex}"
+  value = "${var.ibm_stack_id}"
 }
-
